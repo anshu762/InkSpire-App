@@ -83,7 +83,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET || 'secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
+      { expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as any }
     );
 
     const refreshToken = crypto.randomBytes(40).toString('hex');
@@ -133,7 +133,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       { id: existingToken.user.id, email: existingToken.user.email },
       process.env.JWT_SECRET || 'secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
+      { expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as any }
     );
 
     const newRefreshToken = crypto.randomBytes(40).toString('hex');
