@@ -127,11 +127,16 @@ export default function ResponsesListModal({ isVisible, prompt, onClose }: Respo
         )}
       </BottomSheet>
 
-      <CommentThread 
-        isVisible={!!selectedSubmissionId}
-        submissionId={selectedSubmissionId!}
-        onClose={() => setSelectedSubmissionId(null)}
-      />
+      <View 
+        style={StyleSheet.absoluteFill}
+        pointerEvents={selectedSubmissionId ? "box-none" : "none"}
+      >
+        <CommentThread 
+          isVisible={!!selectedSubmissionId}
+          submissionId={selectedSubmissionId || ''}
+          onClose={() => setSelectedSubmissionId(null)}
+        />
+      </View>
     </>
   );
 }
