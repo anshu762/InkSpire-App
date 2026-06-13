@@ -18,7 +18,9 @@ export const useIdeaSync = (matchId: string) => {
           // Insert at the beginning of the first page
           const newPages = [...oldData.pages];
           if (newPages.length > 0) {
-            newPages[0] = { ...newPages[0], data: [idea, ...newPages[0].data] };
+            // Remove any optimistic temp items and prepend the real idea
+            const filteredData = newPages[0].data.filter((i: any) => !String(i.id).startsWith('temp-'));
+            newPages[0] = { ...newPages[0], data: [idea, ...filteredData] };
           }
           return { ...oldData, pages: newPages };
         });
@@ -74,7 +76,8 @@ export const useIdeaSync = (matchId: string) => {
                 if (idea.id === ideaId) {
                   return {
                     ...idea,
-                    replies: [reply, ...(idea.replies || [])],
+                    // Remove optimistic temp replies and prepend the real reply
+                    replies: [reply, ...(idea.replies || []).filter((r: any) => !String(r.id).startsWith('temp-'))],
                     _count: { replies: (idea._count?.replies || 0) + 1 }
                   };
                 }

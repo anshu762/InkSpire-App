@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { api } from '../../../services/api';
 import ReplyThread from './ReplyThread';
+import { useQueryClient } from '@tanstack/react-query';
 import { ActionModal, ActionOption } from '../../ui/ActionModal';
 
 interface IdeaCardProps {
@@ -22,6 +23,7 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 export default function IdeaCard({ idea, matchId, isOwn, partnerName }: IdeaCardProps) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
@@ -33,11 +35,24 @@ export default function IdeaCard({ idea, matchId, isOwn, partnerName }: IdeaCard
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+
+    // Optimistic Update
+    queryClient.setQueriesData({ queryKey: ['ideas', matchId] }, (oldData: any) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page: any) => ({
+          ...page,
+          data: page.data.map((i: any) => (i.id === idea.id ? { ...i, isPinned: !i.isPinned } : i))
+        })),
+      };
+    });
+
     try {
-      // Optimistically UI update is handled by the socket, but we trigger the API
       await api.patch(`/matches/${matchId}/ideas/${idea.id}/pin`);
     } catch (e) {
       console.error(e);
+      queryClient.invalidateQueries({ queryKey: ['ideas', matchId] });
     }
   };
 
@@ -49,10 +64,23 @@ export default function IdeaCard({ idea, matchId, isOwn, partnerName }: IdeaCard
   };
 
   const handleDelete = async () => {
+    // Optimistic Update
+    queryClient.setQueriesData({ queryKey: ['ideas', matchId] }, (oldData: any) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page: any) => ({
+          ...page,
+          data: page.data.filter((i: any) => i.id !== idea.id)
+        })),
+      };
+    });
+
     try {
       await api.delete(`/matches/${matchId}/ideas/${idea.id}`);
     } catch (e) {
       console.error(e);
+      queryClient.invalidateQueries({ queryKey: ['ideas', matchId] });
     }
   };
 

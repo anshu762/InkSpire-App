@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../services/api';
 import { useIdeaSync } from '../../../hooks/useIdeaSync';
 import { useAuthStore } from '../../../store/authStore';
@@ -23,6 +23,7 @@ export default function IdeaWorkspace({ matchId, partner }: IdeaWorkspaceProps) 
 
   // Setup Socket sync
   const { partnerTyping } = useIdeaSync(matchId);
+  const queryClient = useQueryClient();
 
   // Debounce search
   useEffect(() => {
@@ -58,11 +59,36 @@ export default function IdeaWorkspace({ matchId, partner }: IdeaWorkspaceProps) 
   const ideas = data ? data.pages.flatMap((page: any) => page.data || page) : [];
 
   const handleSendIdea = async (ideaData: any) => {
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticIdea = {
+      id: tempId,
+      matchId,
+      authorId: user?.id,
+      type: ideaData.type || 'OTHER',
+      content: ideaData.content,
+      tags: ideaData.tags || [],
+      isPinned: false,
+      createdAt: new Date().toISOString(),
+      author: { id: user?.id, displayName: user?.displayName || 'You', avatar: user?.avatar },
+      _count: { replies: 0 },
+      replies: []
+    };
+
+    queryClient.setQueriesData({ queryKey: ['ideas', matchId] }, (oldData: any) => {
+      if (!oldData) return { pages: [{ data: [optimisticIdea], nextCursor: null }], pageParams: [] };
+      const newPages = [...oldData.pages];
+      if (newPages.length > 0) {
+        newPages[0] = { ...newPages[0], data: [optimisticIdea, ...newPages[0].data] };
+      }
+      return { ...oldData, pages: newPages };
+    });
+
     try {
       await api.post(`/matches/${matchId}/ideas`, ideaData);
-      // Socket handles cache update optimistically
     } catch (err) {
       console.error("Failed to post idea", err);
+      queryClient.invalidateQueries({ queryKey: ['ideas', matchId] });
     }
   };
 

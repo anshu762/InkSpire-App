@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { ActionModal } from '../../ui/ActionModal';
 
 interface ReplyThreadProps {
@@ -16,11 +17,44 @@ export default function ReplyThread({ ideaId, matchId, replies = [] }: ReplyThre
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const user = useAuthStore(state => state.user);
+  const queryClient = useQueryClient();
 
   const handleSend = async () => {
     if (!content.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
+    
+    // Optimistic Update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticReply = {
+      id: tempId,
+      ideaId,
+      authorId: user?.id,
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+      author: { displayName: user?.displayName || 'You' }
+    };
+
+    queryClient.setQueriesData({ queryKey: ['ideas', matchId] }, (oldData: any) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page: any) => ({
+          ...page,
+          data: page.data.map((idea: any) => {
+            if (idea.id === ideaId) {
+              return {
+                ...idea,
+                replies: [optimisticReply, ...(idea.replies || [])],
+                _count: { replies: (idea._count?.replies || 0) + 1 }
+              };
+            }
+            return idea;
+          })
+        })),
+      };
+    });
+
     try {
       await api.post(`/matches/${matchId}/ideas/${ideaId}/replies`, {
         content: content.trim()
@@ -28,6 +62,7 @@ export default function ReplyThread({ ideaId, matchId, replies = [] }: ReplyThre
       setContent('');
     } catch (e) {
       console.error('Failed to reply', e);
+      queryClient.invalidateQueries({ queryKey: ['ideas', matchId] });
     } finally {
       setIsSubmitting(false);
     }
@@ -35,11 +70,35 @@ export default function ReplyThread({ ideaId, matchId, replies = [] }: ReplyThre
 
   const handleDelete = async () => {
     if (!showDeleteConfirm) return;
+    const replyId = showDeleteConfirm;
+    setShowDeleteConfirm(null);
+
+    // Optimistic Update
+    queryClient.setQueriesData({ queryKey: ['ideas', matchId] }, (oldData: any) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page: any) => ({
+          ...page,
+          data: page.data.map((idea: any) => {
+            if (idea.id === ideaId) {
+              return {
+                ...idea,
+                replies: (idea.replies || []).filter((r: any) => r.id !== replyId),
+                _count: { replies: Math.max(0, (idea._count?.replies || 0) - 1) }
+              };
+            }
+            return idea;
+          })
+        })),
+      };
+    });
+
     try {
-      await api.delete(`/matches/${matchId}/ideas/${ideaId}/replies/${showDeleteConfirm}`);
-      setShowDeleteConfirm(null);
+      await api.delete(`/matches/${matchId}/ideas/${ideaId}/replies/${replyId}`);
     } catch (e) {
       console.error(e);
+      queryClient.invalidateQueries({ queryKey: ['ideas', matchId] });
     }
   };
 
