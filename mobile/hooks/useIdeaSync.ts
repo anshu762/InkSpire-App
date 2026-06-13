@@ -14,11 +14,11 @@ export const useIdeaSync = (matchId: string) => {
       socket.on('idea:created', (idea) => {
         // Optimistically update React Query cache for ideas
         queryClient.setQueriesData({ queryKey: ['ideas', matchId] }, (oldData: any) => {
-          if (!oldData) return { pages: [[idea]], pageParams: [] };
+          if (!oldData) return { pages: [{ data: [idea], nextCursor: null }], pageParams: [] };
           // Insert at the beginning of the first page
           const newPages = [...oldData.pages];
           if (newPages.length > 0) {
-            newPages[0] = [idea, ...newPages[0]];
+            newPages[0] = { ...newPages[0], data: [idea, ...newPages[0].data] };
           }
           return { ...oldData, pages: newPages };
         });
@@ -29,9 +29,10 @@ export const useIdeaSync = (matchId: string) => {
           if (!oldData) return oldData;
           return {
             ...oldData,
-            pages: oldData.pages.map((page: any[]) =>
-              page.map((idea) => (idea.id === updatedIdea.id ? updatedIdea : idea))
-            ),
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((idea: any) => (idea.id === updatedIdea.id ? updatedIdea : idea))
+            })),
           };
         });
       });
@@ -41,9 +42,10 @@ export const useIdeaSync = (matchId: string) => {
           if (!oldData) return oldData;
           return {
             ...oldData,
-            pages: oldData.pages.map((page: any[]) =>
-              page.filter((idea) => idea.id !== ideaId)
-            ),
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: page.data.filter((idea: any) => idea.id !== ideaId)
+            })),
           };
         });
       });
@@ -53,9 +55,10 @@ export const useIdeaSync = (matchId: string) => {
           if (!oldData) return oldData;
           return {
             ...oldData,
-            pages: oldData.pages.map((page: any[]) =>
-              page.map((idea) => (idea.id === ideaId ? { ...idea, isPinned } : idea))
-            ),
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((idea: any) => (idea.id === ideaId ? { ...idea, isPinned } : idea))
+            })),
           };
         });
       });
@@ -65,8 +68,9 @@ export const useIdeaSync = (matchId: string) => {
           if (!oldData) return oldData;
           return {
             ...oldData,
-            pages: oldData.pages.map((page: any[]) =>
-              page.map((idea) => {
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((idea: any) => {
                 if (idea.id === ideaId) {
                   return {
                     ...idea,
@@ -76,7 +80,7 @@ export const useIdeaSync = (matchId: string) => {
                 }
                 return idea;
               })
-            ),
+            })),
           };
         });
       });
@@ -86,8 +90,9 @@ export const useIdeaSync = (matchId: string) => {
           if (!oldData) return oldData;
           return {
             ...oldData,
-            pages: oldData.pages.map((page: any[]) =>
-              page.map((idea) => {
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((idea: any) => {
                 if (idea.id === ideaId) {
                   return {
                     ...idea,
@@ -97,7 +102,7 @@ export const useIdeaSync = (matchId: string) => {
                 }
                 return idea;
               })
-            ),
+            })),
           };
         });
       });

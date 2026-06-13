@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { storage } from '../utils/storage';
+import { BASE_URL } from '../services/api';
 
-// Assuming server is running locally on port 8000 for Android/iOS emulator or localhost for web
-const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
+const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || BASE_URL.replace('/api', '');
 
 let socketInstance: Socket | null = null;
 
