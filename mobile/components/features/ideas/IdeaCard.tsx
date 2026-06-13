@@ -172,7 +172,6 @@ export default function IdeaCard({ idea, matchId, isOwn, partnerName }: IdeaCard
 const styles = StyleSheet.create({
   container: {
     marginBottom: 8,
-    transform: [{ scaleY: -1 }], // Fix inversion for flatlist
   },
   pinnedHeader: {
     flexDirection: 'row',

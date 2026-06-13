@@ -240,7 +240,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-    transform: [{ scaleY: -1 }], // Because list is inverted
   },
   emptyTitle: {
     fontSize: 18,
