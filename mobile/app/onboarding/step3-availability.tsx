@@ -41,9 +41,9 @@ export default function Step3AvailabilityScreen() {
 
     const payload = {
       genres: params.genres ? JSON.parse(params.genres as string) : [],
-      experienceLevel: params.experienceLevel || undefined,
+      experienceLevel: (params.experienceLevel as string) || undefined,
       writingGoals: params.writingGoals ? JSON.parse(params.writingGoals as string) : [],
-      bio: params.bio || undefined,
+      bio: (params.bio as string) || undefined,
       availability,
       dailyWordCount: wordCount,
     };
@@ -76,21 +76,35 @@ export default function Step3AvailabilityScreen() {
 
   // Simple custom slider logic using layout width
   const [sliderWidth, setSliderWidth] = useState(0);
+  const sliderWidthRef = useRef(0);
+  const wordCountRef = useRef(wordCount);
+  const initialDragValueRef = useRef(500);
+
+  wordCountRef.current = wordCount;
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
+      onPanResponderGrant: (evt) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        initialDragValueRef.current = wordCountRef.current;
+        
+        if (sliderWidthRef.current > 0 && evt.nativeEvent.locationX) {
+           const rawPercentage = Math.max(0, Math.min(1, evt.nativeEvent.locationX / sliderWidthRef.current));
+           const value = 100 + rawPercentage * (4900); // 5000 - 100
+           const snappedValue = Math.round(value / 50) * 50;
+           setWordCount(snappedValue);
+           initialDragValueRef.current = snappedValue;
+        }
       },
       onPanResponderMove: (evt, gestureState) => {
-        if (sliderWidth > 0) {
-          const rawPercentage = Math.max(0, Math.min(1, gestureState.moveX / sliderWidth));
-          const value = 100 + rawPercentage * (5000 - 100);
-          // Snap to steps of 50
-          const snappedValue = Math.round(value / 50) * 50;
-          if (snappedValue !== wordCount) {
-            setWordCount(snappedValue);
-          }
+        if (sliderWidthRef.current > 0) {
+          const percentageChange = gestureState.dx / sliderWidthRef.current;
+          const valueChange = percentageChange * (4900);
+          const newValue = initialDragValueRef.current + valueChange;
+          const clampedValue = Math.max(100, Math.min(5000, newValue));
+          const snappedValue = Math.round(clampedValue / 50) * 50;
+          setWordCount(snappedValue);
         }
       },
       onPanResponderRelease: () => {
@@ -100,7 +114,7 @@ export default function Step3AvailabilityScreen() {
   ).current;
 
   const getPercentage = () => {
-    return ((wordCount - 100) / (5000 - 100)) * 100;
+    return ((wordCount - 100) / (4900)) * 100;
   };
 
   return (
@@ -157,7 +171,11 @@ export default function Step3AvailabilityScreen() {
 
         <View 
           className="h-10 justify-center mb-10" 
-          onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
+          onLayout={(e) => {
+            const w = e.nativeEvent.layout.width;
+            setSliderWidth(w);
+            sliderWidthRef.current = w;
+          }}
           {...panResponder.panHandlers}
         >
           <View className="h-2 bg-gray-200 rounded-full w-full absolute" />
