@@ -3,9 +3,27 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { useRouter } from 'expo-router';
+import { api } from '../../services/api';
+import { useState, useEffect } from 'react';
 export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
+  const router = useRouter();
+  const [pendingRequests, setPendingRequests] = useState(0);
+
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      try {
+        const response = await api.get('/matches/requests');
+        if (response.data?.incoming) {
+          setPendingRequests(response.data.incoming.length);
+        }
+      } catch (e) {
+        // silently fail
+      }
+    };
+    fetchPendingRequests();
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
@@ -21,6 +39,25 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+        {/* Match Requests Alert */}
+        {pendingRequests > 0 && (
+          <TouchableOpacity 
+            className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-6 flex-row items-center justify-between"
+            onPress={() => router.push('/match/requests')}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-10 h-10 bg-indigo-100 rounded-full items-center justify-center">
+                <Ionicons name="people" size={20} color="#4f46e5" />
+              </View>
+              <View>
+                <Text className="text-indigo-900 font-bold">Match Requests</Text>
+                <Text className="text-indigo-700 text-sm">You have {pendingRequests} pending request{pendingRequests > 1 ? 's' : ''}</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#4f46e5" />
+          </TouchableOpacity>
+        )}
+
         {/* Daily Goal Card */}
         <View className="bg-white rounded-2xl p-5 mb-6 border border-gray-100 shadow-sm">
           <View className="flex-row justify-between items-center mb-4">

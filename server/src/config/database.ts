@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client'; // Force TS refresh
 import { env } from './env';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
