@@ -28,6 +28,9 @@ model User {
   comments         Comment[]
   likes            Like[]
   refreshTokens    RefreshToken[]
+  matchesInitiated Match[] @relation("MatchesInitiated")
+  matchesReceived  Match[] @relation("MatchesReceived")
+  notifications    Notification[]
 }
 
 enum Role {
@@ -93,4 +96,41 @@ model Like {
   createdAt DateTime @default(now())
 
   @@id([userId, postId])
+}
+
+enum MatchStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  UNMATCHED
+}
+
+model Match {
+  id          String      @id @default(uuid())
+  requesterId String
+  receiveeId  String
+  status      MatchStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  requester   User        @relation("MatchesInitiated", fields: [requesterId], references: [id], onDelete: Cascade)
+  receivee    User        @relation("MatchesReceived", fields: [receiveeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiveeId])
+}
+
+enum NotificationType {
+  MATCH_REQUEST
+  MATCH_ACCEPTED
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  type        NotificationType
+  referenceId String?
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

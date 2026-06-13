@@ -3,7 +3,7 @@ import { TouchableOpacity, Text, ActivityIndicator, TouchableOpacityProps, View 
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   className?: string;
@@ -28,6 +28,8 @@ export const Button: React.FC<ButtonProps> = ({
         return 'bg-transparent';
       case 'danger':
         return 'bg-red-500';
+      case 'outline':
+        return 'bg-transparent border border-gray-300';
       default:
         return 'bg-blue-600';
     }
@@ -42,6 +44,8 @@ export const Button: React.FC<ButtonProps> = ({
         return 'text-gray-900';
       case 'ghost':
         return 'text-blue-600';
+      case 'outline':
+        return 'text-gray-700';
       default:
         return 'text-white';
     }

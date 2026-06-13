@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import { UserController } from './user.controller';
-import { validate } from '../../middleware/validate';
-import { UpdateProfileSchema } from './user.schema';
 import { verifyToken } from '../../middleware/auth';
 
 const router = Router();
 
-// All user routes should be protected
 router.use(verifyToken);
 
-router.patch('/me', validate(UpdateProfileSchema), UserController.updateProfile);
+router.get('/me', UserController.getMe);
+router.patch('/me', UserController.updateProfile);
+router.get('/discover', UserController.getDiscoverFeed);
+router.post('/avatar', UserController.uploadAvatar);
+router.get('/:id', UserController.getUserProfile);
 
 export default router;
