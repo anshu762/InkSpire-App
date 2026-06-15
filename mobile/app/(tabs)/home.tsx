@@ -107,6 +107,20 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Peer Feedback Entry */}
+        <TouchableOpacity 
+          className="bg-indigo-600 rounded-2xl p-5 mb-6 shadow-sm flex-row items-center justify-between"
+          onPress={() => router.push('/feedback')}
+        >
+          <View className="flex-1 mr-4">
+            <Text className="text-xl font-bold text-white mb-1">Peer Feedback</Text>
+            <Text className="text-indigo-100 text-sm">Get structured critique on your drafts or help other writers.</Text>
+          </View>
+          <View className="w-12 h-12 bg-indigo-500 rounded-full items-center justify-center">
+            <Ionicons name="chatbubbles" size={24} color="#fff" />
+          </View>
+        </TouchableOpacity>
+
         {/* Your Genres */}
         <Text className="text-lg font-bold text-gray-900 mb-4">Your Genres</Text>
         <View className="flex-row flex-wrap gap-2 mb-8">
