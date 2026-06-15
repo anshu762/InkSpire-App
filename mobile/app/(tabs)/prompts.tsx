@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ export default function PromptsScreen() {
   const [selectedPrompt, setSelectedPrompt] = useState<any>(null);
 
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   // Fetch Daily Prompt
   const { data: dailyPromptData, isLoading: isLoadingDaily } = useQuery({
@@ -136,30 +137,39 @@ export default function PromptsScreen() {
         activeOpacity={0.9}
       >
         <LinearGradient
-          colors={['#8b5cf6', '#f43f5e']}
+          colors={['#4f46e5', '#ec4899', '#f43f5e']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.dailyPromptGradient}
         >
           <View style={styles.dailyBadge}>
-            <Text style={styles.dailyBadgeText}>Today's Prompt</Text>
-            {/* Subtle dot to encourage action */}
+            <Ionicons name="star" size={14} color="#fef08a" />
+            <Text style={styles.dailyBadgeText}>Daily Challenge</Text>
             <View style={styles.actionDot} />
           </View>
+          
           <Text style={styles.dailyPromptText}>"{dailyPrompt.content}"</Text>
+          
           <View style={styles.dailyFooter}>
             <View style={styles.genreTag}>
-              <Text style={styles.genreTagText}>{dailyPrompt.genre}</Text>
+              <Text style={styles.genreTagText}>{dailyPrompt.genre?.replace(/_/g, ' ')}</Text>
             </View>
             <TouchableOpacity 
               style={styles.responseCount}
-              onPress={() => {
+              onPress={(e) => {
+                e.stopPropagation();
                 setSelectedPrompt(dailyPrompt);
                 setShowResponsesList(true);
               }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="people" size={14} color="#ffffff" />
-              <Text style={styles.responseCountText}>{dailyPrompt._count?.submissions || 0} responses</Text>
+              <View style={styles.responseAvatarStack}>
+                <Ionicons name="people" size={16} color="#ffffff" />
+              </View>
+              <Text style={styles.responseCountText}>
+                {dailyPrompt._count?.submissions || 0} responses
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color="#ffffff" style={{ opacity: 0.8 }} />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -171,40 +181,54 @@ export default function PromptsScreen() {
     <View style={styles.communityCard}>
       <View style={styles.communityContent}>
         <View style={styles.communityHeader}>
-          <Text style={styles.communityGenre}>{item.genre}</Text>
-          <Text style={styles.communityAuthor}>by {item.author?.displayName || 'Anonymous'}</Text>
+          <View style={styles.authorBadge}>
+            <View style={styles.avatarMini}>
+              <Text style={styles.avatarMiniText}>{item.author?.displayName?.[0]?.toUpperCase() || 'A'}</Text>
+            </View>
+            <Text style={styles.communityAuthor}>{item.author?.displayName || 'Anonymous'}</Text>
+          </View>
+          <Text style={styles.communityGenre}>{item.genre?.replace(/_/g, ' ')}</Text>
         </View>
-        <Text style={styles.communityPromptText} numberOfLines={3}>{item.content}</Text>
+        
+        <Text style={styles.communityPromptText} numberOfLines={4}>"{item.content}"</Text>
         
         <View style={styles.communityFooter}>
+          <View style={styles.actionGroup}>
+            <TouchableOpacity 
+              style={[styles.actionBtn, item.hasUpvoted && styles.actionBtnActive]}
+              onPress={() => handleUpvote(item.id, item.hasUpvoted, item._count?.upvotes || 0)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons 
+                name={item.hasUpvoted ? "heart" : "heart-outline"} 
+                size={20} 
+                color={item.hasUpvoted ? "#ec4899" : "#64748b"} 
+              />
+              <Text style={[styles.actionText, item.hasUpvoted && styles.actionTextPink]}>
+                {item._count?.upvotes || 0}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionBtn}
+              onPress={() => {
+                setSelectedPrompt(item);
+                setShowResponsesList(true);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="chatbubbles-outline" size={20} color="#64748b" />
+              <Text style={styles.actionText}>{item._count?.submissions || 0}</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity 
-            style={[styles.upvoteBtn, item.hasUpvoted && styles.upvotedBtn]}
-            onPress={() => handleUpvote(item.id, item.hasUpvoted, item._count?.upvotes || 0)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name={item.hasUpvoted ? "arrow-up-circle" : "arrow-up-circle-outline"} size={20} color={item.hasUpvoted ? "#2563eb" : "#6b7280"} />
-            <Text style={[styles.upvoteText, item.hasUpvoted && styles.upvotedText]}>{item._count?.upvotes || 0}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.respondBtn}
+            style={styles.writeBtn}
             onPress={() => handleWriteResponse(item)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.8}
           >
-            <Ionicons name="create-outline" size={18} color="#4b5563" />
-            <Text style={styles.respondText}>Write</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.respondBtn}
-            onPress={() => {
-              setSelectedPrompt(item);
-              setShowResponsesList(true);
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="people-outline" size={18} color="#4b5563" />
-            <Text style={styles.respondText}>{item._count?.submissions || 0}</Text>
+            <Ionicons name="pencil" size={16} color="#ffffff" />
+            <Text style={styles.writeBtnText}>Write</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -212,35 +236,61 @@ export default function PromptsScreen() {
   );
 
   const renderMyResponse = ({ item }: { item: any }) => (
-    <View style={styles.responseCard}>
-      <Text style={styles.responsePromptText} numberOfLines={2}>Prompt: {item.prompt.content}</Text>
-      <Text style={styles.responseText} numberOfLines={4}>{item.content}</Text>
-      <View style={styles.responseFooter}>
-        <Text style={styles.wordCount}>{item.wordCount} words</Text>
-        <View style={styles.commentCount}>
-          <Ionicons name="chatbubble-outline" size={14} color="#6b7280" />
-          <Text style={styles.commentCountText}>{item._count?.comments || 0}</Text>
+    <View style={styles.myResponseCard}>
+      <View style={styles.myResponseHeader}>
+        <Ionicons name="document-text" size={16} color="#8b5cf6" />
+        <Text style={styles.myResponseDate}>
+          {new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+        </Text>
+      </View>
+      <View style={styles.myResponsePromptBox}>
+        <Text style={styles.myResponsePromptText} numberOfLines={2}>"{item.prompt.content}"</Text>
+      </View>
+      <Text style={styles.myResponseContent} numberOfLines={5}>{item.content}</Text>
+      <View style={styles.myResponseFooter}>
+        <View style={styles.statPill}>
+          <Ionicons name="text-outline" size={14} color="#64748b" />
+          <Text style={styles.statText}>{item.wordCount} words</Text>
         </View>
+        <TouchableOpacity 
+          style={styles.statPillActive}
+          onPress={() => {
+            setSelectedPrompt(item.prompt);
+            setShowResponsesList(true); // Since we need to view comments, opening the list might not perfectly go to *this* response yet, but it's a start.
+            // Ideally, we'd open CommentThread directly here. We can just show the response in ResponsesList.
+          }}
+        >
+          <Ionicons name="chatbubble-outline" size={14} color="#4f46e5" />
+          <Text style={styles.statTextActive}>{item._count?.comments || 0} comments</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Prompts</Text>
+        <View>
+          <Text style={styles.headerSubtitle}>Discover & Create</Text>
+          <Text style={styles.headerTitle}>Writing Prompts</Text>
+        </View>
+        <View style={styles.headerIconBg}>
+          <Ionicons name="sparkles" size={24} color="#8b5cf6" />
+        </View>
       </View>
 
       <FlatList
         data={activeTab === 'BROWSE' ? communityPrompts : myResponses}
         keyExtractor={item => item.id}
         renderItem={activeTab === 'BROWSE' ? renderCommunityPrompt : renderMyResponse}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom + 80, 100) }]}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl 
             refreshing={activeTab === 'BROWSE' ? isRefetchingCommunity : isRefetchingResponses} 
             onRefresh={activeTab === 'BROWSE' ? refetchCommunity : refetchResponses} 
+            tintColor="#8b5cf6"
           />
         }
         onEndReached={() => {
@@ -252,17 +302,19 @@ export default function PromptsScreen() {
           <>
             {activeTab === 'BROWSE' && renderDailyPrompt()}
             
-            {/* Tabs */}
+            {/* Tabs (Segmented Control Style) */}
             <View style={styles.tabContainer}>
               <TouchableOpacity 
                 style={[styles.tab, activeTab === 'BROWSE' && styles.activeTab]}
                 onPress={() => setActiveTab('BROWSE')}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.tabText, activeTab === 'BROWSE' && styles.activeTabText]}>Browse</Text>
+                <Text style={[styles.tabText, activeTab === 'BROWSE' && styles.activeTabText]}>Explore</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.tab, activeTab === 'MY_RESPONSES' && styles.activeTab]}
                 onPress={() => setActiveTab('MY_RESPONSES')}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.tabText, activeTab === 'MY_RESPONSES' && styles.activeTabText]}>My Responses</Text>
               </TouchableOpacity>
@@ -274,8 +326,9 @@ export default function PromptsScreen() {
                 <TouchableOpacity 
                   style={styles.suggestBtn}
                   onPress={() => setShowSuggestModal(true)}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons name="add" size={16} color="#ffffff" />
+                  <Ionicons name="add" size={18} color="#ffffff" />
                   <Text style={styles.suggestBtnText}>Suggest</Text>
                 </TouchableOpacity>
               </View>
@@ -285,16 +338,18 @@ export default function PromptsScreen() {
         ListEmptyComponent={
           (activeTab === 'BROWSE' ? !isLoadingCommunity : !isLoadingResponses) ? (
             <View style={styles.emptyState}>
-              <Ionicons name="bulb-outline" size={48} color="#d1d5db" />
+              <View style={styles.emptyIconBg}>
+                <Ionicons name="color-wand-outline" size={48} color="#8b5cf6" />
+              </View>
               <Text style={styles.emptyTitle}>Nothing here yet</Text>
               <Text style={styles.emptyText}>
                 {activeTab === 'BROWSE' 
-                  ? "Be the first to suggest a community prompt!" 
-                  : "You haven't written any responses yet. Pick a prompt and start writing!"}
+                  ? "Be the first to suggest a brilliant prompt for the community!" 
+                  : "You haven't written any responses yet. Pick a prompt and let your creativity flow!"}
               </Text>
             </View>
           ) : (
-            <ActivityIndicator style={{ marginTop: 40 }} />
+            <ActivityIndicator style={{ marginTop: 40 }} color="#8b5cf6" size="large" />
           )
         }
       />
@@ -323,50 +378,68 @@ export default function PromptsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#f8fafc',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#f8fafc',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8b5cf6',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: -0.5,
+  },
+  headerIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ede9fe',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 80,
+    paddingHorizontal: 20,
   },
   dailyPromptCard: {
-    borderRadius: 20,
-    marginBottom: 24,
-    shadowColor: '#f43f5e',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    borderRadius: 24,
+    marginBottom: 32,
+    shadowColor: '#ec4899',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
   },
   dailyPromptGradient: {
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 24,
+    padding: 28,
   },
   dailyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginBottom: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 20,
+    gap: 6,
   },
   dailyBadgeText: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -375,16 +448,20 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10b981',
-    marginLeft: 8,
+    backgroundColor: '#fef08a',
+    marginLeft: 4,
+    shadowColor: '#fef08a',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
   dailyPromptText: {
-    fontSize: 22,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#ffffff',
-    lineHeight: 32,
-    marginBottom: 24,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', // Proxy for Playfair Display
+    lineHeight: 34,
+    marginBottom: 28,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   dailyFooter: {
     flexDirection: 'row',
@@ -392,212 +469,307 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   genreTag: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   genreTagText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   responseCount: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     gap: 6,
+  },
+  responseAvatarStack: {
+    marginRight: 2,
   },
   responseCountText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 24,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+    padding: 6,
+    marginBottom: 28,
   },
   tab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   activeTab: {
     backgroundColor: '#ffffff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#6b7280',
+    color: '#64748b',
   },
   activeTabText: {
-    color: '#111827',
+    color: '#0f172a',
+    fontWeight: '700',
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
   },
   suggestBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111827',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   suggestBtnText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   communityCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: 24,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: '#f1f5f9',
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   communityContent: {
-    padding: 16,
+    padding: 20,
   },
   communityHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  authorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  avatarMini: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e0e7ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarMiniText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#4f46e5',
   },
   communityGenre: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#8b5cf6',
-    backgroundColor: '#f5f3ff',
-    paddingHorizontal: 8,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4f46e5',
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
+    textTransform: 'uppercase',
   },
   communityAuthor: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
   },
   communityPromptText: {
     fontSize: 16,
-    color: '#1f2937',
-    lineHeight: 24,
-    marginBottom: 16,
+    color: '#1e293b',
+    lineHeight: 26,
+    marginBottom: 20,
+    fontStyle: 'italic',
   },
   communityFooter: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 16,
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 16,
   },
-  upvoteBtn: {
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
   },
-  upvotedBtn: {
-    backgroundColor: '#eff6ff',
+  actionBtnActive: {
+    // optional active styling
   },
-  upvoteText: {
-    fontSize: 13,
+  actionText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#4b5563',
+    color: '#64748b',
   },
-  upvotedText: {
-    color: '#2563eb',
+  actionTextPink: {
+    color: '#ec4899',
   },
-  respondBtn: {
+  writeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     gap: 6,
   },
-  respondText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#4b5563',
+  writeBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
-  responseCard: {
+  myResponseCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: '#f1f5f9',
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  responsePromptText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: 8,
-  },
-  responseText: {
-    fontSize: 15,
-    color: '#1f2937',
-    lineHeight: 22,
+  myResponseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 12,
   },
-  responseFooter: {
+  myResponseDate: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  myResponsePromptBox: {
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#8b5cf6',
+    marginBottom: 16,
+  },
+  myResponsePromptText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#475569',
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  myResponseContent: {
+    fontSize: 16,
+    color: '#1e293b',
+    lineHeight: 26,
+    marginBottom: 20,
+  },
+  myResponseFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    paddingTop: 12,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 16,
   },
-  wordCount: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-  commentCount: {
+  statPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
   },
-  commentCountText: {
-    fontSize: 12,
-    color: '#6b7280',
+  statPillActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+  },
+  statText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  statTextActive: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4f46e5',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
+  },
+  emptyIconBg: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#ede9fe',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 12,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: 15,
+    color: '#64748b',
     textAlign: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
+    lineHeight: 22,
   },
 });

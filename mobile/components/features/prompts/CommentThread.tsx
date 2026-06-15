@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Keyboard, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Modal, SafeAreaView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, Keyboard, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Modal, Animated, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CommentThreadProps {
   isVisible: boolean;
@@ -15,9 +16,50 @@ export default function CommentThread({ isVisible, submissionId, onClose }: Comm
   const [content, setContent] = useState('');
   const queryClient = useQueryClient();
   const user = useAuthStore(state => state.user);
+  const insets = useSafeAreaInsets();
 
-  React.useEffect(() => {
-    if (!isVisible) {
+  const panY = useRef(new Animated.Value(0)).current;
+
+  const resetPositionAnim = Animated.timing(panY, {
+    toValue: 0,
+    duration: 300,
+    useNativeDriver: true,
+  });
+
+  const closeAnim = Animated.timing(panY, {
+    toValue: 1000,
+    duration: 300,
+    useNativeDriver: true,
+  });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          panY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 150 || gestureState.vy > 1.5) {
+          Keyboard.dismiss();
+          closeAnim.start(() => {
+            onClose();
+          });
+        } else {
+          resetPositionAnim.start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (isVisible) {
+      panY.setValue(0);
+    } else {
       setContent('');
     }
   }, [isVisible]);
@@ -109,13 +151,13 @@ export default function CommentThread({ isVisible, submissionId, onClose }: Comm
     const isOwn = item.authorId === user?.id;
     return (
       <TouchableOpacity 
-        style={styles.commentItem} 
+        style={[styles.commentItem, isOwn && styles.ownCommentItem]} 
         onLongPress={() => handleLongPress(item)}
         delayLongPress={500}
         activeOpacity={isOwn ? 0.7 : 1}
       >
         <View style={styles.commentHeader}>
-          <Text style={styles.commentAuthor}>{isOwn ? 'You' : item.author?.displayName}</Text>
+          <Text style={[styles.commentAuthor, isOwn && styles.ownCommentAuthor]}>{isOwn ? 'You' : item.author?.displayName}</Text>
           <Text style={styles.commentTime}>
             {new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </Text>
@@ -132,62 +174,69 @@ export default function CommentThread({ isVisible, submissionId, onClose }: Comm
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+      <KeyboardAvoidingView 
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose(); }} />
         
-        <SafeAreaView style={styles.modalContent}>
-          <View style={styles.handleContainer}>
-            <View style={styles.handle} />
-          </View>
-
-          <View style={styles.header}>
-            <Text style={styles.title}>Comments</Text>
-            <Ionicons name="close" size={24} color="#6b7280" onPress={onClose} />
-          </View>
-
-          {isLoading ? (
-            <View style={styles.loader}>
-              <ActivityIndicator size="large" color="#4f46e5" />
+        <Animated.View style={[styles.modalContent, { paddingBottom: insets.bottom, transform: [{ translateY: panY }] }]}>
+          <View {...panResponder.panHandlers}>
+            <View style={styles.handleContainer}>
+              <View style={styles.handle} />
             </View>
-          ) : (
-            <FlatList
-              data={comments}
-              keyExtractor={(item) => item.id}
-              renderItem={renderComment}
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>No comments yet. Be the first to share your thoughts!</Text>
-                </View>
-              }
-            />
-          )}
 
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-          >
-            <View style={styles.inputArea}>
-              <TextInput
-                style={styles.input}
-                placeholder="Add a comment..."
-                placeholderTextColor="#9ca3af"
-                value={content}
-                onChangeText={setContent}
-                multiline
-                maxLength={500}
-              />
-              <TouchableOpacity 
-                style={[styles.sendBtn, !content.trim() && styles.sendBtnDisabled]}
-                onPress={handleSend}
-                disabled={!content.trim() || addCommentMutation.isPending}
-              >
-                <Ionicons name="send" size={18} color="#ffffff" />
+            <View style={styles.header}>
+              <Text style={styles.title}>Comments</Text>
+              <TouchableOpacity onPress={onClose} hitSlop={15} style={styles.closeBtn}>
+                <Ionicons name="close-circle" size={26} color="#9ca3af" />
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </View>
+          </View>
+
+          <View style={styles.listContainer}>
+            {isLoading ? (
+              <View style={styles.loader}>
+                <ActivityIndicator size="large" color="#4f46e5" />
+              </View>
+            ) : (
+              <FlatList
+                data={comments}
+                keyExtractor={(item) => item.id}
+                renderItem={renderComment}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={styles.emptyState}>
+                    <Ionicons name="chatbubbles-outline" size={48} color="#d1d5db" />
+                    <Text style={styles.emptyTitle}>No comments yet</Text>
+                    <Text style={styles.emptyText}>Be the first to share your thoughts!</Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
+
+          <View style={styles.inputArea}>
+            <TextInput
+              style={styles.input}
+              placeholder="Add a comment..."
+              placeholderTextColor="#9ca3af"
+              value={content}
+              onChangeText={setContent}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity 
+              style={[styles.sendBtn, !content.trim() && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!content.trim() || addCommentMutation.isPending}
+            >
+              <Ionicons name="send" size={16} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -199,43 +248,53 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '70%',
+    backgroundColor: '#f8fafc',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    height: '75%',
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  listContainer: {
+    flex: 1, // Crucial for scrolling
   },
   handleContainer: {
     alignItems: 'center',
     paddingTop: 12,
     paddingBottom: 8,
+    backgroundColor: '#ffffff',
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#e5e7eb',
+    width: 48,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#d1d5db',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingBottom: 16,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: '#f1f5f9',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  closeBtn: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
   },
   loader: {
     flex: 1,
@@ -247,33 +306,54 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   commentItem: {
-    marginBottom: 16,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  ownCommentItem: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
   },
   commentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'center',
+    marginBottom: 8,
   },
   commentAuthor: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  ownCommentAuthor: {
+    color: '#4f46e5',
   },
   commentTime: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#94a3b8',
   },
   commentContent: {
     fontSize: 15,
-    color: '#1f2937',
+    color: '#1e293b',
     lineHeight: 22,
   },
   emptyState: {
     paddingVertical: 40,
     alignItems: 'center',
   },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#475569',
+    marginTop: 16,
+    marginBottom: 8,
+  },
   emptyText: {
-    color: '#6b7280',
+    fontSize: 14,
+    color: '#94a3b8',
     textAlign: 'center',
   },
   inputArea: {
@@ -281,31 +361,31 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    borderTopColor: '#e2e8f0',
     backgroundColor: '#ffffff',
     gap: 12,
   },
   input: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    minHeight: 40,
-    maxHeight: 100,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    minHeight: 48,
+    maxHeight: 120,
     fontSize: 15,
+    color: '#0f172a',
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#4f46e5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 2,
   },
   sendBtnDisabled: {
-    backgroundColor: '#9ca3af',
+    backgroundColor: '#cbd5e1',
   }
 });
