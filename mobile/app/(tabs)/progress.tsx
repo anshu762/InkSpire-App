@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
@@ -9,13 +9,8 @@ import { StreakCard } from '../../components/features/progress/StreakCard';
 import { Leaderboard } from '../../components/features/progress/Leaderboard';
 import { LogWordsModal } from '../../components/features/progress/LogWordsModal';
 import * as Haptics from 'expo-haptics';
-import { documentDirectory, EncodingType, writeAsStringAsync } from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
-import { TouchableOpacity, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function ProgressScreen() {
-  const [isLogModalVisible, setIsLogModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
@@ -45,23 +40,6 @@ export default function ProgressScreen() {
     setIsRefreshing(false);
   }, []);
 
-  const handleExport = async () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const response = await api.get('/progress/export');
-      const csvContent = response.data;
-      
-      const fileUri = `${documentDirectory}inkspire_progress.csv`;
-      await writeAsStringAsync(fileUri, csvContent, { encoding: EncodingType.UTF8 });
-      
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
-      }
-    } catch (error) {
-      console.error('Export failed', error);
-    }
-  };
-
   const todayStr = new Date().toISOString().split('T')[0];
   const todayLog = history?.find((log: any) => log.date.startsWith(todayStr));
   const todayWordCount = todayLog ? todayLog.wordCount : 0;
@@ -73,10 +51,6 @@ export default function ProgressScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Progress Tracker</Text>
-        <TouchableOpacity style={styles.exportBtn} onPress={handleExport}>
-          <Ionicons name="download-outline" size={20} color="#2563eb" />
-          <Text style={styles.exportBtnText}>Export</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -130,20 +104,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     color: '#0f172a',
-  },
-  exportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 6,
-  },
-  exportBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2563eb',
   },
   scrollContent: {
     padding: 16,
