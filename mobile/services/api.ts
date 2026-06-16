@@ -3,11 +3,13 @@ import { storage } from '../utils/storage';
 import { Platform } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 
-// For Android emulator to access local server, we use 10.0.2.2
-// For iOS simulator, localhost works
-export const BASE_URL = __DEV__
-  ? 'http://10.165.153.125:8000/api'
-  : 'https://api.inkspire.com/api'; // Production URL
+const getBaseUrl = () => {
+  if (!__DEV__) return 'https://api.inkspire.com/api';
+  // Use 10.0.2.2 for Android emulator, localhost for iOS simulator
+  return Platform.OS === 'android' ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
+};
+
+export const BASE_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: BASE_URL,

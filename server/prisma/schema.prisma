@@ -38,6 +38,9 @@ model User {
   promptUpvotes    PromptUpvote[]
   promptSubmissions PromptSubmission[]
   submissionComments SubmissionComment[]
+
+  feedbackRequests FeedbackRequest[]
+  feedbackResponses FeedbackResponse[]
 }
 
 enum Role {
@@ -130,6 +133,7 @@ model Match {
 enum NotificationType {
   MATCH_REQUEST
   MATCH_ACCEPTED
+  FEEDBACK_RECEIVED
 }
 
 model Notification {
@@ -229,4 +233,54 @@ model SubmissionComment {
 
   submission      PromptSubmission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   author          User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+enum RequestStatus {
+  OPEN
+  IN_REVIEW
+  CLOSED
+}
+
+enum FocusArea {
+  CLARITY
+  PACING
+  DIALOGUE
+  STRUCTURE
+  VOICE
+  CHARACTER
+}
+
+model FeedbackRequest {
+  id          String             @id @default(uuid())
+  authorId    String
+  title       String
+  excerpt     String             @db.Text
+  genre       Genre
+  focusAreas  FocusArea[]
+  context     String?            @db.Text
+  status      RequestStatus      @default(OPEN)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  author      User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  responses   FeedbackResponse[]
+}
+
+model FeedbackResponse {
+  id                String          @id @default(uuid())
+  requestId         String
+  reviewerId        String
+  overallImpression String          @db.Text
+  clarityScore      Int
+  pacingScore       Int
+  dialogueScore     Int
+  structureScore    Int
+  detailedNotes     String          @db.Text
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  request           FeedbackRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  reviewer          User            @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, reviewerId])
 }

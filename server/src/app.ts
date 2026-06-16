@@ -8,6 +8,7 @@ import authRouter from './modules/auth/auth.routes';
 import userRouter from './modules/users/user.routes';
 import matchesRouter from './modules/matches/matches.routes';
 import promptsRouter from './modules/prompts/prompts.routes';
+import feedbackRouter from './modules/feedback/feedback.routes';
 
 const app = express();
 
@@ -51,6 +52,7 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/users', userRouter);
 apiRouter.use('/matches', matchesRouter);
 apiRouter.use('/prompts', promptsRouter);
+apiRouter.use('/feedback', feedbackRouter);
 
 app.use('/api', apiRouter);
 

@@ -5,11 +5,13 @@ import { useAuthStore } from '../../store/authStore';
 import { AvatarUpload } from '../../components/features/profile/AvatarUpload';
 import { EditProfileModal } from '../../components/features/profile/EditProfileModal';
 import { Button } from '../../components/ui/Button';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 
 export default function ProfileScreen() {
   const { user } = useAuthStore();
+  const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -131,6 +133,19 @@ export default function ProfileScreen() {
             {(!profile.writingGoals || profile.writingGoals.length === 0) && (
               <Text style={styles.emptyText}>No goals set.</Text>
             )}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Peer Feedback</Text>
+          <View style={styles.goalsContainer}>
+            <TouchableOpacity 
+              style={[styles.goalItem, { backgroundColor: '#eff6ff', padding: 12, borderRadius: 12 }]}
+              onPress={() => router.push('/feedback')}
+            >
+              <Ionicons name="chatbubbles" size={20} color="#2563eb" />
+              <Text style={[styles.goalText, { fontWeight: '600' }]}>Browse Feedback Requests</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
