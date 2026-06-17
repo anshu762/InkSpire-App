@@ -1,5 +1,6 @@
 import { prisma } from '../../config/database';
 import { Prisma, RequestStatus } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export class FeedbackService {
   static async createRequest(userId: string, data: any) {
@@ -172,13 +173,14 @@ export class FeedbackService {
       });
     }
 
-    await prisma.notification.create({
-      data: {
-        userId: request.authorId,
-        type: 'FEEDBACK_RECEIVED',
-        referenceId: requestId
-      }
-    });
+    await NotificationsService.createAndSend(
+      request.authorId,
+      'FEEDBACK_RECEIVED',
+      'New Feedback Received!',
+      'Someone has left constructive feedback on your writing.',
+      { screen: 'feedback', requestId },
+      requestId
+    );
 
     return response;
   }

@@ -127,4 +127,11 @@ export class UserService {
     if (!user) throw new Error("User not found");
     return user;
   }
+
+  static async updatePushToken(userId: string, token: string | null) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { expoPushToken: token }
+    });
+  }
 }
