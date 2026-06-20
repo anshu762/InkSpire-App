@@ -6,11 +6,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const [pendingRequests, setPendingRequests] = useState(0);
   const [activeMatches, setActiveMatches] = useState<any[]>([]);
+
+  const { data: unreadData } = useQuery({
+    queryKey: ['unreadCount'],
+    queryFn: async () => {
+      const res = await api.get('/notifications/unread-count');
+      return res.data?.data?.count || 0;
+    },
+    refetchInterval: 30000, // Poll every 30s
+  });
+
+  const unreadCount = unreadData || 0;
 
   useEffect(() => {
     const fetchMatches = async () => {
@@ -40,8 +52,16 @@ export default function HomeScreen() {
           <Text className="text-2xl font-extrabold text-gray-900">InkSpire</Text>
           <Text className="text-sm text-gray-500 font-medium">Hello, {user?.displayName || 'Writer'}</Text>
         </View>
-        <TouchableOpacity className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center">
+        <TouchableOpacity 
+          className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center relative"
+          onPress={() => router.push('/notifications')}
+        >
           <Ionicons name="notifications-outline" size={20} color="#2563eb" />
+          {unreadCount > 0 && (
+            <View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white items-center justify-center">
+              <Text className="text-white text-[8px] font-bold">{unreadCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 

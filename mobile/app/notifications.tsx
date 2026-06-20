@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../services/api';
+import { api } from '../services/api';
 import Animated, { FadeInUp, FadeOut } from 'react-native-reanimated';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -107,7 +107,7 @@ export default function NotificationsScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="notifications-off-outline" size={64} color="#334155" />
+              <Ionicons name="notifications-off-outline" size={64} color="#94a3b8" />
               <Text style={styles.emptyTitle}>You're all caught up! 🎉</Text>
               <Text style={styles.emptyText}>No new notifications for now.</Text>
             </View>
@@ -121,7 +121,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0f1a',
+    backgroundColor: '#f8fafc',
   },
   header: {
     flexDirection: 'row',
@@ -129,13 +129,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#1e1e2e',
+    borderBottomColor: '#f1f5f9',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0f172a',
   },
   markAllText: {
     color: '#8b5cf6',
@@ -148,14 +149,21 @@ const styles = StyleSheet.create({
   },
   notificationCard: {
     flexDirection: 'row',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     alignItems: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   unreadCard: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#f8fafc',
     borderLeftWidth: 4,
     borderLeftColor: '#8b5cf6',
   },
@@ -163,7 +171,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#2a2a3e',
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -177,22 +185,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#cbd5e1',
+    color: '#334155',
     marginBottom: 4,
   },
   unreadText: {
-    color: '#fff',
+    color: '#0f172a',
     fontWeight: '700',
   },
   body: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#64748b',
     marginBottom: 8,
     lineHeight: 20,
   },
   time: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   markReadBtn: {
     padding: 8,
@@ -212,14 +220,14 @@ const styles = StyleSheet.create({
     marginTop: 100,
   },
   emptyTitle: {
-    color: '#fff',
+    color: '#0f172a',
     fontSize: 20,
     fontWeight: '700',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 16,
   }
 });

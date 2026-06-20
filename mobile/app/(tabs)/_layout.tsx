@@ -106,17 +106,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: 'Updates',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={24} color={color} />
-          ),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: '#ef4444' }
-        }}
-      />
     </Tabs>
   );
 }
