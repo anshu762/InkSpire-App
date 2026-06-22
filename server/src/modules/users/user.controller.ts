@@ -50,15 +50,22 @@ export class UserController {
   }
 
   static async uploadAvatar(req: Request, res: Response) {
-    // Mock implementation for avatar upload
-    // In production, upload to S3/Cloudinary and return URL
     try {
       const userId = req.user!.id;
-      // Pretend we uploaded to cloud and got a URL
       const mockAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`;
-      
       const user = await UserService.updateProfile(userId, { avatar: mockAvatarUrl } as any);
       res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async updatePushToken(req: Request, res: Response) {
+    try {
+      const { token } = req.body;
+      const userId = req.user!.id;
+      await UserService.updatePushToken(userId, token);
+      res.json({ success: true, message: 'Push token updated successfully' });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

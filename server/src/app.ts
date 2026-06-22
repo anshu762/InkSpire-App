@@ -11,6 +11,7 @@ import promptsRouter from './modules/prompts/prompts.routes';
 import feedbackRouter from './modules/feedback/feedback.routes';
 import progressRouter from './modules/progress/progress.routes';
 import eventsRouter from './modules/events/events.routes';
+import notificationsRouter from './modules/notifications/notifications.routes';
 
 const app = express();
 
@@ -50,13 +51,20 @@ apiRouter.get('/health', (req, res) => {
   res.json({ success: true, message: 'Server is healthy' });
 });
 
-apiRouter.use('/auth', authRouter);
+// Specific rate limiters
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { success: false, error: { message: 'Too many auth requests' } } });
+const matchesLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { success: false, error: { message: 'Match request limit reached' } } });
+const feedbackLimiter = rateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 5, message: { success: false, error: { message: 'Daily feedback limit reached' } } });
+const promptsLimiter = rateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 3, message: { success: false, error: { message: 'Daily prompt submission limit reached' } } });
+
+apiRouter.use('/auth', authLimiter, authRouter);
 apiRouter.use('/users', userRouter);
-apiRouter.use('/matches', matchesRouter);
-apiRouter.use('/prompts', promptsRouter);
-apiRouter.use('/feedback', feedbackRouter);
+apiRouter.use('/matches', matchesLimiter, matchesRouter);
+apiRouter.use('/prompts', promptsLimiter, promptsRouter);
+apiRouter.use('/feedback', feedbackLimiter, feedbackRouter);
 apiRouter.use('/progress', progressRouter);
 apiRouter.use('/events', eventsRouter);
+apiRouter.use('/notifications', notificationsRouter);
 
 app.use('/api', apiRouter);
 

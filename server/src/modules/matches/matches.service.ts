@@ -1,4 +1,5 @@
 import { prisma } from '../../config/database';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export class MatchesService {
   static async sendMatchRequest(requesterId: string, receiveeId: string) {
@@ -28,13 +29,14 @@ export class MatchesService {
       }
     });
 
-    await prisma.notification.create({
-      data: {
-        userId: receiveeId,
-        type: 'MATCH_REQUEST',
-        referenceId: match.id,
-      }
-    });
+    await NotificationsService.createAndSend(
+      receiveeId,
+      'MATCH_REQUEST',
+      'New Writing Partner Request!',
+      'Someone wants to match with you. Check your pending requests.',
+      { screen: 'match-requests', matchId: match.id },
+      match.id
+    );
 
     return match;
   }
@@ -98,13 +100,14 @@ export class MatchesService {
       data: { status: 'ACCEPTED' }
     });
 
-    await prisma.notification.create({
-      data: {
-        userId: updated.requesterId,
-        type: 'MATCH_ACCEPTED',
-        referenceId: updated.id,
-      }
-    });
+    await NotificationsService.createAndSend(
+      updated.requesterId,
+      'MATCH_ACCEPTED',
+      'Match Request Accepted! 🎉',
+      'Your match request was accepted. You can now collaborate in your workspace.',
+      { screen: 'workspace', matchId: updated.id },
+      updated.id
+    );
 
     return updated;
   }

@@ -23,6 +23,7 @@ model User {
   genres           Genre[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  expoPushToken    String?
 
   posts            Post[]
   comments         Comment[]
@@ -136,12 +137,18 @@ enum NotificationType {
   MATCH_REQUEST
   MATCH_ACCEPTED
   FEEDBACK_RECEIVED
+  IDEA_ADDED
+  EVENT_STARTING
+  DAILY_REMINDER
 }
 
 model Notification {
   id          String           @id @default(uuid())
   userId      String
   type        NotificationType
+  title       String
+  body        String
+  data        Json?
   referenceId String?
   isRead      Boolean          @default(false)
   createdAt   DateTime         @default(now())

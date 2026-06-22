@@ -6,35 +6,31 @@ import { Button } from '../../components/ui/Button';
 import { KeyboardAvoidingWrapper } from '../../components/ui/KeyboardAvoidingWrapper';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Email is invalid'),
+  password: z.string().min(1, 'Password is required')
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginScreen() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [apiError, setApiError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' }
+  });
 
-  const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
-    if (!email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email is invalid';
-    
-    if (!password) newErrors.password = 'Password is required';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = async () => {
+  const onSubmit = async (data: LoginFormData) => {
     setApiError('');
-    if (!validate()) return;
-
-    setIsLoading(true);
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', data);
       
       if (response.data.success) {
         const { user, accessToken, refreshToken } = response.data.data;
@@ -52,8 +48,6 @@ export default function LoginScreen() {
       } else {
         setApiError(error.message || 'An unexpected error occurred');
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -72,44 +66,48 @@ export default function LoginScreen() {
         ) : null}
 
         <View className="space-y-4 mb-6">
-          <Input
-            label="Email"
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (errors.email) setErrors({ ...errors, email: undefined });
-            }}
-            onBlur={() => validate()}
-            error={errors.email}
-            leftIcon="mail-outline"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            editable={!isLoading}
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Email"
+                placeholder="Enter your email"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.email?.message}
+                leftIcon="mail-outline"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isSubmitting}
+              />
+            )}
           />
 
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (errors.password) setErrors({ ...errors, password: undefined });
-            }}
-            onBlur={() => validate()}
-            error={errors.password}
-            leftIcon="lock-closed-outline"
-            secureTextEntry
-            editable={!isLoading}
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Password"
+                placeholder="Enter your password"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.password?.message}
+                leftIcon="lock-closed-outline"
+                secureTextEntry
+                editable={!isSubmitting}
+              />
+            )}
           />
-
-
         </View>
 
         <Button
           title="Sign In"
-          onPress={handleLogin}
-          loading={isLoading}
+          onPress={handleSubmit(onSubmit)}
+          loading={isSubmitting}
           className="mb-6"
         />
 

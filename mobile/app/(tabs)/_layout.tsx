@@ -3,11 +3,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
+import { useNotifications } from '../../hooks/useNotifications';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../services/api';
 
 export default function TabsLayout() {
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
   
+  useNotifications(); // Initialize push notifications
+
+  const { data: unreadData } = useQuery({
+    queryKey: ['unreadCount'],
+    queryFn: async () => {
+      const res = await api.get('/notifications/unread-count');
+      return res.data?.data?.count || 0;
+    },
+    refetchInterval: 30000, // Poll every 30s as fallback
+  });
+
+  const unreadCount = unreadData || 0;
+
   const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 16) : Math.max(insets.bottom, 24);
 
   return (
@@ -42,24 +58,6 @@ export default function TabsLayout() {
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="discover"
-        options={{
-          title: 'Discover',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="events"
-        options={{
-          title: 'Events',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={24} color={color} />
           ),
         }}
       />
