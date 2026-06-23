@@ -32,11 +32,18 @@ export class FeedbackService {
       where.focusAreas = { hasSome: filters.focusAreas };
     }
 
+    let orderBy: Prisma.FeedbackRequestOrderByWithRelationInput = { createdAt: 'desc' };
+    if (filters.sortBy === 'oldest') {
+      orderBy = { createdAt: 'asc' };
+    } else if (filters.sortBy === 'most_responses') {
+      orderBy = { responses: { _count: 'desc' } };
+    }
+
     const requests = await prisma.feedbackRequest.findMany({
       where,
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       include: {
         author: { select: { id: true, displayName: true, avatar: true } },
         _count: { select: { responses: true } },
