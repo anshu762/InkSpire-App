@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { CountdownTimer } from '../../components/features/events/CountdownTimer'
 import { Leaderboard } from '../../components/features/events/Leaderboard';
 import { useAuthStore } from '../../store/authStore';
 import { BackButton } from '../../components/ui/BackButton';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 export default function SprintRoomScreen() {
   const { id } = useLocalSearchParams();
@@ -33,6 +34,7 @@ export default function SprintRoomScreen() {
   
   const [localCount, setLocalCount] = useState('0');
   const [sprintState, setSprintState] = useState<'UPCOMING' | 'LIVE' | 'ENDED'>('UPCOMING');
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   
   // Debounce the socket emission
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -62,14 +64,7 @@ export default function SprintRoomScreen() {
 
   const handleBack = () => {
     if (sprintState === 'LIVE') {
-      Alert.alert(
-        'Leave Sprint?',
-        'You can return while the sprint is still active. Your words are saved.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Leave', style: 'destructive', onPress: () => router.back() }
-        ]
-      );
+      setShowLeaveConfirm(true);
     } else {
       router.back();
     }
@@ -157,6 +152,17 @@ export default function SprintRoomScreen() {
           </TouchableOpacity>
         </View>
       ) : null}
+
+      <ConfirmModal
+        visible={showLeaveConfirm}
+        title="Leave Sprint?"
+        message="You can return while the sprint is still active. Your words are saved."
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+        variant="warning"
+        onConfirm={() => { setShowLeaveConfirm(false); router.back(); }}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
     </SafeAreaView>
   );
 }

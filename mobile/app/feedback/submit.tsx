@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import * as Haptics from 'expo-haptics';
+import { Toast } from '../../components/ui/Toast';
 
 const GENRES = ['FANTASY', 'SCI_FI', 'ROMANCE', 'MYSTERY', 'THRILLER', 'HORROR', 'LITERARY_FICTION', 'HISTORICAL_FICTION', 'NON_FICTION', 'POETRY', 'OTHER'];
 const FOCUS_AREAS = ['CLARITY', 'PACING', 'DIALOGUE', 'STRUCTURE', 'VOICE', 'CHARACTER'];
@@ -15,6 +16,7 @@ export default function SubmitRequestScreen() {
   const [excerpt, setExcerpt] = useState('');
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [context, setContext] = useState('');
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'error' as 'success'|'error'|'info' });
   
   const queryClient = useQueryClient();
 
@@ -32,7 +34,7 @@ export default function SubmitRequestScreen() {
       router.replace('/feedback'); // Go back to browse, ideally toast here
     },
     onError: (err: any) => {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to submit request');
+      setToast({ visible: true, message: err.response?.data?.message || err.message || 'Failed to submit request', type: 'error' });
     }
   });
 
@@ -138,6 +140,13 @@ export default function SubmitRequestScreen() {
 
       </ScrollView>
     </KeyboardAvoidingView>
+
+    <Toast
+      visible={toast.visible}
+      message={toast.message}
+      type={toast.type}
+      onHide={() => setToast(prev => ({ ...prev, visible: false }))}
+    />
   );
 }
 

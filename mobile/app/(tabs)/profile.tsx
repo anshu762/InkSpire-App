@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { AvatarUpload } from '../../components/features/profile/AvatarUpload';
@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -16,6 +17,7 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -48,28 +50,20 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Log Out",
-      "Are you sure you want to log out of InkSpire?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Log Out", 
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const refreshToken = useAuthStore.getState().refreshToken;
-              if (refreshToken) {
-                await api.post('/auth/logout', { refreshToken }).catch(() => {});
-              }
-            } finally {
-              await logout();
-              router.replace('/'); // Redirect to auth flow root
-            }
-          }
-        }
-      ]
-    );
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
+    try {
+      const refreshToken = useAuthStore.getState().refreshToken;
+      if (refreshToken) {
+        await api.post('/auth/logout', { refreshToken }).catch(() => {});
+      }
+    } finally {
+      await logout();
+      router.replace('/');
+    }
   };
 
   if (isLoading) {
@@ -187,6 +181,17 @@ export default function ProfileScreen() {
         onClose={() => setIsEditModalVisible(false)}
         initialData={profile}
         onSave={handleSaveProfile}
+      />
+
+      <ConfirmModal
+        visible={showLogoutConfirm}
+        title="Log Out"
+        message="Are you sure you want to log out of InkSpire?"
+        confirmLabel="Log Out"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
       />
     </SafeAreaView>
   );

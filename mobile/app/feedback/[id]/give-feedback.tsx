@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../services/api';
 import * as Haptics from 'expo-haptics';
 import { RubricSlider } from '../../../components/features/feedback/RubricSlider';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { Toast } from '../../../components/ui/Toast';
 
 export default function GiveFeedbackScreen() {
   const { id } = useLocalSearchParams();
@@ -16,6 +18,8 @@ export default function GiveFeedbackScreen() {
   const [dialogueScore, setDialogueScore] = useState(3);
   const [structureScore, setStructureScore] = useState(3);
   const [detailedNotes, setDetailedNotes] = useState('');
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'error' as 'success'|'error'|'info' });
 
   const { data: request, isLoading } = useQuery({
     queryKey: ['feedbackRequest', id],
@@ -42,34 +46,24 @@ export default function GiveFeedbackScreen() {
       router.back();
     },
     onError: (err: any) => {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to submit feedback');
+      setToast({ visible: true, message: err.response?.data?.message || err.message || 'Failed to submit feedback', type: 'error' });
     }
   });
 
   const handleSubmit = () => {
-    // if (!isFormValid) return;
-    
-    Alert.alert(
-      'Submit Feedback',
-      'Are you sure you want to submit? This cannot be edited later.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Submit', 
-          style: 'default',
-          onPress: () => {
-            mutation.mutate({
-              overallImpression,
-              clarityScore,
-              pacingScore,
-              dialogueScore,
-              structureScore,
-              detailedNotes
-            });
-          }
-        }
-      ]
-    );
+    setShowSubmitConfirm(true);
+  };
+
+  const confirmSubmit = () => {
+    setShowSubmitConfirm(false);
+    mutation.mutate({
+      overallImpression,
+      clarityScore,
+      pacingScore,
+      dialogueScore,
+      structureScore,
+      detailedNotes
+    });
   };
 
   if (isLoading || !request) {
@@ -160,6 +154,24 @@ export default function GiveFeedbackScreen() {
 
       </ScrollView>
     </KeyboardAvoidingView>
+
+    <ConfirmModal
+      visible={showSubmitConfirm}
+      title="Submit Feedback"
+      message="Are you sure you want to submit? This cannot be edited later."
+      confirmLabel="Submit"
+      cancelLabel="Cancel"
+      variant="success"
+      onConfirm={confirmSubmit}
+      onCancel={() => setShowSubmitConfirm(false)}
+    />
+
+    <Toast
+      visible={toast.visible}
+      message={toast.message}
+      type={toast.type}
+      onHide={() => setToast(prev => ({ ...prev, visible: false }))}
+    />
   );
 }
 
