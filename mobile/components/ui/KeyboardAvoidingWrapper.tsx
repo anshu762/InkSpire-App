@@ -24,6 +24,7 @@ interface KeyboardAvoidingWrapperProps {
    * Pass the height of a custom header if needed.
    */
   extraOffset?: number;
+  className?: string;
 }
 
 /**
@@ -47,10 +48,12 @@ export const KeyboardAvoidingWrapper: React.FC<KeyboardAvoidingWrapperProps> = (
   scrollViewProps,
   dismissOnTap = true,
   extraOffset = 0,
+  className,
 }) => {
   const content = (
     <KeyboardAvoidingView
       style={[styles.flex, style]}
+      className={className}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? extraOffset : 0}
     >
