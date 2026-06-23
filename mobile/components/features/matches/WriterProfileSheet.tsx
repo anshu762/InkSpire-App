@@ -41,7 +41,7 @@ export function WriterProfileSheet({
 
   if (!writer) return null;
 
-  const displayAvatar = writer.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${writer.id}`;
+  const displayAvatar = writer.avatar || `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(writer.displayName || 'U')}&backgroundColor=6366f1&textColor=ffffff&fontSize=40`;
 
   return (
     <BottomSheet

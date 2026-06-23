@@ -86,7 +86,7 @@ export function AvatarUpload({ currentAvatarUrl, onUploadSuccess }: AvatarUpload
     }
   };
 
-  const displayUri = localUri || currentAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=fallback';
+  const displayUri = localUri || currentAvatarUrl || `https://api.dicebear.com/7.x/initials/png?seed=U&backgroundColor=6366f1&textColor=ffffff&fontSize=40`;
 
   return (
     <View style={styles.container}>
