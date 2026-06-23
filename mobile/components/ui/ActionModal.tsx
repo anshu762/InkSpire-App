@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, TouchableWithoutFeedback } from 'react-native';
+import React, { useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
@@ -18,104 +19,92 @@ interface ActionModalProps {
 }
 
 export function ActionModal({ visible, title, options, onClose }: ActionModalProps) {
-  const slideAnim = React.useRef(new Animated.Value(300)).current;
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   useEffect(() => {
     if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 65,
-          friction: 11,
-        }),
-      ]).start();
+      bottomSheetModalRef.current?.present();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 300,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      bottomSheetModalRef.current?.dismiss();
     }
   }, [visible]);
 
-  if (!visible) return null;
+  const handleSheetChanges = useCallback((index: number) => {
+    if (index === -1 && visible) {
+      // The user swiped it down or tapped the backdrop to close it
+      onClose();
+    }
+  }, [visible, onClose]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        onPress={onClose}
+      />
+    ),
+    [onClose]
+  );
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-          <TouchableWithoutFeedback>
-            <Animated.View style={[styles.container, { transform: [{ translateY: slideAnim }] }]}>
-              <View style={styles.dragHandle} />
-              
-              {title && <Text style={styles.title}>{title}</Text>}
-              
-              <View style={styles.optionsContainer}>
-                {options.map((option, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[styles.optionButton, index < options.length - 1 && styles.borderBottom]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      onClose();
-                      // Slight delay to allow modal to close before action
-                      setTimeout(option.onPress, 100);
-                    }}
-                  >
-                    {option.icon && (
-                      <Ionicons
-                        name={option.icon}
-                        size={22}
-                        color={option.destructive ? '#ef4444' : '#374151'}
-                        style={styles.icon}
-                      />
-                    )}
-                    <Text style={[styles.optionText, option.destructive && styles.destructiveText]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+    <BottomSheetModal
+      ref={bottomSheetModalRef}
+      onChange={handleSheetChanges}
+      backdropComponent={renderBackdrop}
+      enableDynamicSizing={true}
+      handleIndicatorStyle={styles.dragHandle}
+      backgroundStyle={styles.backgroundStyle}
+    >
+      <BottomSheetView style={styles.container}>
+        {title && <Text style={styles.title}>{title}</Text>}
+        
+        <View style={styles.optionsContainer}>
+          {options.map((option, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.optionButton, index < options.length - 1 && styles.borderBottom]}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.selectionAsync();
+                onClose();
+                setTimeout(option.onPress, 100);
+              }}
+            >
+              {option.icon && (
+                <Ionicons
+                  name={option.icon}
+                  size={22}
+                  color={option.destructive ? '#ef4444' : '#374151'}
+                  style={styles.icon}
+                />
+              )}
+              <Text style={[styles.optionText, option.destructive && styles.destructiveText]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-              <TouchableOpacity style={styles.cancelButton} activeOpacity={0.7} onPress={onClose}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
-      </TouchableWithoutFeedback>
-    </Modal>
+        <TouchableOpacity style={styles.cancelButton} activeOpacity={0.7} onPress={onClose}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'flex-end',
-  },
-  container: {
+  backgroundStyle: {
     backgroundColor: '#f3f4f6',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+  },
+  container: {
     paddingHorizontal: 16,
-    paddingBottom: 32, // for safe area
+    paddingBottom: 32, // safe area padding
     paddingTop: 12,
   },
   dragHandle: {
@@ -124,7 +113,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#d1d5db',
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginTop: 8,
   },
   title: {
     fontSize: 14,
