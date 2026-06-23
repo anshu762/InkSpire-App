@@ -1,6 +1,14 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Animated,
+} from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
@@ -19,92 +27,150 @@ interface ActionModalProps {
 }
 
 export function ActionModal({ visible, title, options, onClose }: ActionModalProps) {
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const slideAnim = useRef(new Animated.Value(400)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      bottomSheetModalRef.current?.present();
+      slideAnim.setValue(400);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+      ]).start();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } else {
-      bottomSheetModalRef.current?.dismiss();
     }
   }, [visible]);
 
-  const handleSheetChanges = useCallback((index: number) => {
-    if (index === -1 && visible) {
-      // The user swiped it down or tapped the backdrop to close it
-      onClose();
-    }
-  }, [visible, onClose]);
+  const animateClose = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 400,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onClose());
+  }, [onClose]);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        onPress={onClose}
-      />
-    ),
-    [onClose]
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationY: slideAnim } }],
+    { useNativeDriver: true }
   );
 
-  return (
-    <BottomSheetModal
-      ref={bottomSheetModalRef}
-      onChange={handleSheetChanges}
-      backdropComponent={renderBackdrop}
-      enableDynamicSizing={true}
-      handleIndicatorStyle={styles.dragHandle}
-      backgroundStyle={styles.backgroundStyle}
-    >
-      <BottomSheetView style={styles.container}>
-        {title && <Text style={styles.title}>{title}</Text>}
-        
-        <View style={styles.optionsContainer}>
-          {options.map((option, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.optionButton, index < options.length - 1 && styles.borderBottom]}
-              activeOpacity={0.7}
-              onPress={() => {
-                Haptics.selectionAsync();
-                onClose();
-                setTimeout(option.onPress, 100);
-              }}
-            >
-              {option.icon && (
-                <Ionicons
-                  name={option.icon}
-                  size={22}
-                  color={option.destructive ? '#ef4444' : '#374151'}
-                  style={styles.icon}
-                />
-              )}
-              <Text style={[styles.optionText, option.destructive && styles.destructiveText]}>
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+  const onHandlerStateChange = useCallback(
+    (event: PanGestureHandlerGestureEvent) => {
+      const { translationY, velocityY, state } = event.nativeEvent;
+      // state 5 = GESTURE END
+      if (state === 5) {
+        if (translationY > 100 || velocityY > 600) {
+          animateClose();
+        } else {
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 11,
+          }).start();
+        }
+      }
+    },
+    [animateClose]
+  );
 
-        <TouchableOpacity style={styles.cancelButton} activeOpacity={0.7} onPress={onClose}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-      </BottomSheetView>
-    </BottomSheetModal>
+  if (!visible) return null;
+
+  return (
+    <Modal transparent visible={visible} animationType="none" onRequestClose={animateClose}>
+      {/*
+        GestureHandlerRootView MUST be inside Modal on mobile (Android/iOS),
+        because Modal renders in a new React root, outside the app's GestureHandlerRootView.
+      */}
+      <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+        {/* Backdrop */}
+        <TouchableWithoutFeedback onPress={animateClose}>
+          <Animated.View style={[styles.overlay, { opacity: fadeAnim }]} />
+        </TouchableWithoutFeedback>
+
+        {/* Sheet */}
+        <Animated.View style={[styles.sheetWrapper, { transform: [{ translateY: slideAnim }] }]}>
+          <PanGestureHandler
+            onGestureEvent={onGestureEvent}
+            onHandlerStateChange={onHandlerStateChange}
+            activeOffsetY={10}
+            failOffsetY={-5}
+          >
+            <Animated.View style={styles.container}>
+              <View style={styles.dragHandle} />
+
+              {title && <Text style={styles.title}>{title}</Text>}
+
+              <View style={styles.optionsContainer}>
+                {options.map((option, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.optionButton,
+                      index < options.length - 1 && styles.borderBottom,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      animateClose();
+                      setTimeout(option.onPress, 200);
+                    }}
+                  >
+                    {option.icon && (
+                      <Ionicons
+                        name={option.icon}
+                        size={22}
+                        color={option.destructive ? '#ef4444' : '#374151'}
+                        style={styles.icon}
+                      />
+                    )}
+                    <Text style={[styles.optionText, option.destructive && styles.destructiveText]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Animated.View>
+          </PanGestureHandler>
+        </Animated.View>
+      </GestureHandlerRootView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundStyle: {
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  sheetWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  container: {
     backgroundColor: '#f3f4f6',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-  },
-  container: {
     paddingHorizontal: 16,
-    paddingBottom: 32, // safe area padding
+    paddingBottom: 40,
     paddingTop: 12,
   },
   dragHandle: {
@@ -113,7 +179,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#d1d5db',
     borderRadius: 2,
     alignSelf: 'center',
-    marginTop: 8,
+    marginBottom: 16,
   },
   title: {
     fontSize: 14,
@@ -126,7 +192,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 16,
   },
   optionButton: {
     flexDirection: 'row',
@@ -149,16 +214,5 @@ const styles = StyleSheet.create({
   },
   destructiveText: {
     color: '#ef4444',
-  },
-  cancelButton: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  cancelText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#4f46e5',
   },
 });
