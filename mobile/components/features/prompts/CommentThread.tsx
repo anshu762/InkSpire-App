@@ -171,7 +171,7 @@ export default function CommentThread({ isVisible, submissionId, onClose }: Comm
     >
       <KeyboardAvoidingView 
         style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose(); }} />
         
@@ -209,7 +209,7 @@ export default function CommentThread({ isVisible, submissionId, onClose }: Comm
             )}
           </View>
 
-          <View style={styles.inputArea}>
+          <View style={[styles.inputArea, { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 }]}>
             <TextInput
               style={styles.input}
               placeholder="Add a comment..."
@@ -218,6 +218,9 @@ export default function CommentThread({ isVisible, submissionId, onClose }: Comm
               onChangeText={setContent}
               multiline
               maxLength={500}
+              returnKeyType="send"
+              blurOnSubmit
+              onSubmitEditing={handleSend}
             />
             <TouchableOpacity 
               style={[styles.sendBtn, !content.trim() && styles.sendBtnDisabled]}

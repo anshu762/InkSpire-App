@@ -122,7 +122,7 @@ export default function SprintRoomScreen() {
 
       {sprintState === 'LIVE' ? (
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.controls}
         >
           <TouchableOpacity style={styles.controlBtn} onPress={decrement}>
