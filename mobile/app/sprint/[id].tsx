@@ -11,6 +11,7 @@ import { useSprintRoom } from '../../hooks/useSprintRoom';
 import { CountdownTimer } from '../../components/features/events/CountdownTimer';
 import { Leaderboard } from '../../components/features/events/Leaderboard';
 import { useAuthStore } from '../../store/authStore';
+import { BackButton } from '../../components/ui/BackButton';
 
 export default function SprintRoomScreen() {
   const { id } = useLocalSearchParams();
@@ -89,9 +90,7 @@ export default function SprintRoomScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#fff" />
-        </TouchableOpacity>
+        <BackButton onPress={handleBack} color="#fff" style={styles.backButton} />
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle} numberOfLines={1}>{event.title}</Text>
           <View style={[styles.connectionDot, isConnected ? styles.dotConnected : styles.dotDisconnected]} />
