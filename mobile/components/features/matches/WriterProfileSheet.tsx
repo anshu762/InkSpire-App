@@ -55,11 +55,6 @@ export function WriterProfileSheet({
       backgroundStyle={{ backgroundColor: '#ffffff', borderRadius: 24 }}
     >
       <BottomSheetScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color="#6b7280" />
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.profileInfo}>
           <Image source={{ uri: displayAvatar }} style={styles.avatar} />

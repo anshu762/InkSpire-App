@@ -120,9 +120,6 @@ export default function SuggestPromptModal({ isVisible, onClose }: SuggestPrompt
             
             <View style={styles.header}>
               <Text style={styles.title}>Suggest a Prompt</Text>
-              <TouchableOpacity onPress={onClose} hitSlop={15} style={styles.closeBtn}>
-                <Ionicons name="close-circle" size={26} color="#9ca3af" />
-              </TouchableOpacity>
             </View>
           </View>
 
