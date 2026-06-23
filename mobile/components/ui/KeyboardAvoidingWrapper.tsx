@@ -53,7 +53,6 @@ export const KeyboardAvoidingWrapper: React.FC<KeyboardAvoidingWrapperProps> = (
   const content = (
     <KeyboardAvoidingView
       style={[styles.flex, style]}
-      className={className}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? extraOffset : 0}
     >

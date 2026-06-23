@@ -7,11 +7,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
-  userInterfaceStyle: 'dark',
+  userInterfaceStyle: 'light',
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#0f0f1a'
+    backgroundColor: '#ffffff'
   },
   assetBundlePatterns: [
     '**/*'
@@ -33,7 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#0f0f1a'
+      backgroundColor: '#ffffff'
     },
     package: 'com.inkspire.app',
     permissions: [
