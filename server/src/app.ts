@@ -16,6 +16,11 @@ import notificationsRouter from './modules/notifications/notifications.routes';
 
 const app = express();
 
+// Root health check route
+app.get('/', (req, res) => {
+  res.json({ success: true, message: 'InkSpire API is running successfully!' });
+});
+
 // Security headers
 app.use(helmet());
 
@@ -47,7 +52,11 @@ app.use(limiter);
 // Mount API routes
 const apiRouter = express.Router();
 
-// Placeholder for actual routes
+// Health check route for /api
+apiRouter.get('/', (req, res) => {
+  res.json({ success: true, message: 'Welcome to the InkSpire API' });
+});
+
 apiRouter.get('/health', (req, res) => {
   res.json({ success: true, message: 'Server is healthy' });
 });
