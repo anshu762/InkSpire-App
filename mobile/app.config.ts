@@ -43,7 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ]
   },
   updates: {
-    url: "https://u.expo.dev/" + (process.env.EXPO_PROJECT_ID || "dummy-project-id"),
+    url: "https://u.expo.dev/" + (process.env.EXPO_PROJECT_ID || ""),
     fallbackToCacheTimeout: 0
   },
   runtimeVersion: {
@@ -73,7 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   extra: {
     eas: {
-      projectId: process.env.EXPO_PROJECT_ID || 'dummy-project-id'
+      projectId: process.env.EXPO_PROJECT_ID
     },
     apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api'
   }
