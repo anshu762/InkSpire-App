@@ -1,8 +1,21 @@
 import { PrismaClient, NotificationType } from '@prisma/client';
-import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 
 const prisma = new PrismaClient();
-const expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN }); // accessToken is optional but recommended
+
+// expo-server-sdk is ESM-only, so we must use a dynamic import() instead of
+// a top-level require(). We lazily load it on first use to avoid the
+// ERR_REQUIRE_ESM error when the compiled CJS bundle runs.
+let _expo: any = null;
+let _Expo: any = null;
+
+async function getExpo() {
+  if (!_expo) {
+    const mod = await import('expo-server-sdk');
+    _Expo = mod.Expo;
+    _expo = new _Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN });
+  }
+  return { expo: _expo, Expo: _Expo };
+}
 
 export class NotificationsService {
   static async getNotifications(userId: string, page = 1, limit = 20) {
@@ -63,29 +76,33 @@ export class NotificationsService {
       }
     });
 
-    // 2. Try pushing to Expo
+    // 2. Try pushing to Expo (using dynamic import to avoid ESM/CJS conflict)
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { expoPushToken: true } });
     
-    if (user?.expoPushToken && Expo.isExpoPushToken(user.expoPushToken)) {
-      const message: ExpoPushMessage = {
-        to: user.expoPushToken,
-        sound: 'default',
-        title,
-        body,
-        data: { ...data, notificationId: notification.id, type }
-      };
-
+    if (user?.expoPushToken) {
       try {
-        const tickets = await expo.sendPushNotificationsAsync([message]);
-        
-        // Handle potential errors like DeviceNotRegistered
-        for (let ticket of tickets) {
-          if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
-            // Token is no longer valid, remove it
-            await prisma.user.update({
-              where: { id: userId },
-              data: { expoPushToken: null }
-            });
+        const { expo, Expo } = await getExpo();
+
+        if (Expo.isExpoPushToken(user.expoPushToken)) {
+          const message = {
+            to: user.expoPushToken,
+            sound: 'default',
+            title,
+            body,
+            data: { ...data, notificationId: notification.id, type }
+          };
+
+          const tickets = await expo.sendPushNotificationsAsync([message]);
+          
+          // Handle potential errors like DeviceNotRegistered
+          for (const ticket of tickets) {
+            if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
+              // Token is no longer valid, remove it
+              await prisma.user.update({
+                where: { id: userId },
+                data: { expoPushToken: null }
+              });
+            }
           }
         }
       } catch (error) {
