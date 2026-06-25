@@ -53,6 +53,7 @@
     "@types/node": "^26.0.1",
     "@types/react": "~19.1.17",
     "@types/react-test-renderer": "^19.1.0",
+    "hermes-compiler": "^250829098.0.2",
     "typescript": "~5.9.3"
   },
   "scripts": {
